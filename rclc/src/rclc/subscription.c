@@ -19,6 +19,7 @@
 #include <rcl/error_handling.h>
 #include <rcutils/logging_macros.h>
 #include <rmw/qos_profiles.h>
+#include <tracetools/tracetools.h>
 
 rcl_ret_t
 rclc_subscription_init_default(
@@ -75,5 +76,7 @@ rclc_subscription_init(
   if (rc != RCL_RET_OK) {
     PRINT_RCLC_ERROR(rclc_subscription_init_best_effort, rcl_subscription_init);
   }
+  // We use the subscription handle for both since there is no rclc subscription handle
+  TRACEPOINT(rclcpp_subscription_init, (const void *)subscription, (const void *)subscription);
   return rc;
 }

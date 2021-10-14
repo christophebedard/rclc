@@ -16,6 +16,7 @@
 
 #include "rclc/executor.h"
 #include <rcutils/time.h>
+#include <tracetools/tracetools.h>
 
 // Include backport of function 'rcl_wait_set_is_valid' introduced in Foxy
 // in case of building for Dashing and Eloquent. This pre-processor macro
@@ -241,6 +242,11 @@ rclc_executor_add_subscription(
 
   executor->info.number_of_subscriptions++;
 
+  TRACEPOINT(
+    rclcpp_subscription_callback_added, (const void *)subscription, (const void *)callback);
+  // tracetools::get_symbol() is currently only in a C++ header
+  TRACEPOINT(rclcpp_callback_register, (const void *)callback, "unavailable");
+
   RCUTILS_LOG_DEBUG_NAMED(ROS_PACKAGE_NAME, "Added a subscription.");
   return ret;
 }
@@ -289,6 +295,12 @@ rclc_executor_add_subscription_with_context(
   }
 
   executor->info.number_of_subscriptions++;
+
+  // Same as rclc_executor_add_subscription()
+  TRACEPOINT(
+    rclcpp_subscription_callback_added, (const void *)subscription, (const void *)callback);
+  // tracetools::get_symbol() is currently only in a C++ header
+  TRACEPOINT(rclcpp_callback_register, (const void *)callback, "unavailable");
 
   RCUTILS_LOG_DEBUG_NAMED(ROS_PACKAGE_NAME, "Added a subscription.");
   return ret;
@@ -885,6 +897,7 @@ _rclc_take_new_data(rclc_executor_handle_t * handle, rcl_wait_set_t * wait_set)
         rc = rcl_take(
           handle->subscription, handle->data, &messageInfo,
           NULL);
+        TRACEPOINT(rclcpp_take, (const void *)handle->data);
         if (rc != RCL_RET_OK) {
           // rcl_take might return this error even with successfull rcl_wait
           if (rc != RCL_RET_SUBSCRIPTION_TAKE_FAILED) {
@@ -988,14 +1001,17 @@ _rclc_execute(rclc_executor_handle_t * handle)
   if (invoke_callback) {
     switch (handle->type) {
       case SUBSCRIPTION:
+        TRACEPOINT(callback_start, (const void *)handle->subscription_callback, false);
         if (handle->data_available) {
           handle->subscription_callback(handle->data);
         } else {
           handle->subscription_callback(NULL);
         }
+        TRACEPOINT(callback_end, (const void *)handle->subscription_callback);
         break;
 
       case SUBSCRIPTION_WITH_CONTEXT:
+        TRACEPOINT(callback_start, (const void *)handle->subscription_callback, false);
         if (handle->data_available) {
           handle->subscription_callback_with_context(
             handle->data,
@@ -1005,11 +1021,14 @@ _rclc_execute(rclc_executor_handle_t * handle)
             NULL,
             handle->callback_context);
         }
+        TRACEPOINT(callback_end, (const void *)handle->subscription_callback);
         break;
 
       case TIMER:
         // case TIMER_WITH_CONTEXT:
+        TRACEPOINT(callback_start, (const void *)handle->timer, false);
         rc = rcl_timer_call(handle->timer);
+        TRACEPOINT(callback_end, (const void *)handle->timer);
         if (rc != RCL_RET_OK) {
           PRINT_RCLC_ERROR(rclc_execute, rcl_timer_call);
           return rc;

@@ -18,6 +18,7 @@
 
 #include <rcl/error_handling.h>
 #include <rcutils/logging_macros.h>
+#include <tracetools/tracetools.h>
 
 rcl_ret_t
 rclc_timer_init_default(
@@ -44,5 +45,13 @@ rclc_timer_init_default(
   } else {
     RCUTILS_LOG_INFO("Created a timer with period %ld ms.\n", timeout_ns / 1000000);
   }
+  // We use the timer handle itself as the callback because the rclc executor itself isn't the one
+  // calling the callback, so we don't have access to the callback (function pointer) in rclc when
+  // triggering it
+  TRACEPOINT(rclcpp_timer_callback_added, (const void *)timer, (const void *)timer);
+  // tracetools::get_symbol() is currently only in a C++ header
+  TRACEPOINT(rclcpp_callback_register, (const void *)timer, "unavailable");
+  // There is no link at all between timers and nodes in rclc
+  TRACEPOINT(rclcpp_timer_link_node, (const void *)timer, NULL);
   return rc;
 }

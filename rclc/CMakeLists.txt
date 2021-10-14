@@ -32,6 +32,7 @@ find_package(rcl REQUIRED)
 find_package(rcutils REQUIRED)
 find_package(rosidl_generator_c REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(tracetools REQUIRED)
 
 if("${rcl_VERSION}" VERSION_LESS "1.0.0")
   message(STATUS
@@ -80,6 +81,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rcl
   rcutils
   rosidl_generator_c
+  tracetools
 )
 
 #################################################
